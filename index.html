@@ -77,8 +77,6 @@
     .card-text { font-size: 0.9rem; margin-bottom: 10px; white-space: pre-wrap; word-break: break-word; line-height: 1.6; }
     .card-divider { border-top: 1px dashed var(--border); margin: 15px 0; }
 
-    .loader { display: none; text-align: center; color: var(--cyan); font-family: monospace; padding: 10px; }
-    
     #sync-overlay {
       display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); border: 2px solid var(--cyan); padding: 2rem; z-index: 100; text-align: center; border-radius: 8px; box-shadow: 0 0 50px rgba(0,0,0,1);
     }
@@ -88,9 +86,75 @@
     
     .img-preview { width: 100px; height: 100px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; transition: 0.2s; }
     .img-preview:hover { transform: scale(1.05); border-color: var(--cyan); }
+
+    /* --- CREATIVE PULSING ANIMATION --- */
+    #global-loader {
+      display: none; /* Flex when active */
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(5, 7, 10, 0.9);
+      backdrop-filter: blur(8px);
+      z-index: 2000;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .pulse-core {
+      position: relative;
+      width: 100px;
+      height: 100px;
+    }
+    
+    .pulse-ring {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      border-radius: 50%;
+      border: 3px solid var(--cyan);
+      animation: pulseAnim 2s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
+    }
+    
+    .pulse-ring:nth-child(2) {
+      border-color: var(--accent);
+      animation-delay: 0.6s;
+    }
+    
+    .pulse-ring:nth-child(3) {
+      border-color: #ffffff;
+      animation-delay: 1.2s;
+    }
+    
+    @keyframes pulseAnim {
+      0% { transform: scale(0.1); opacity: 1; }
+      100% { transform: scale(2.5); opacity: 0; }
+    }
+    
+    .loader-msg {
+      margin-top: 40px;
+      color: var(--cyan);
+      font-family: monospace;
+      font-size: 1.2rem;
+      font-weight: bold;
+      letter-spacing: 3px;
+      animation: textGlow 1s ease-in-out infinite alternate;
+    }
+    
+    @keyframes textGlow {
+      from { text-shadow: 0 0 5px var(--cyan); opacity: 0.7; }
+      to { text-shadow: 0 0 20px var(--cyan), 0 0 30px var(--cyan); opacity: 1; }
+    }
   </style>
 </head>
 <body>
+
+<div id="global-loader">
+  <div class="pulse-core">
+    <div class="pulse-ring"></div>
+    <div class="pulse-ring"></div>
+    <div class="pulse-ring"></div>
+  </div>
+  <div id="loader-text" class="loader-msg">PROCESSING...</div>
+</div>
 
 <div id="sync-overlay">
     <div id="sync-animation" style="color: var(--cyan); font-family: monospace; font-size: 1.2rem; margin-bottom: 10px;">UPDATING ARCHIVE...</div>
@@ -102,8 +166,6 @@
     <h1>VETSHARE</h1>
     <span>CLINICAL REPOSITORY v2.4</span>
   </div>
-
-  <div id="loader" class="loader">LOGGING YOU IN...</div>
 
   <div id="auth">
     <input type="text" id="user" placeholder="VETERINARIAN ID">
@@ -224,9 +286,12 @@
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyrUFfxv5kBM0q9Q8anYubW48Zmf9wUq-zDLFPFle_UE8F80GMAlj9JFJJ3RwxCTBl4RA/exec"; 
   let currentVet = null;
 
-  async function api(payload, loaderId = 'loader') {
+  async function api(payload, loaderId = 'global-loader') {
     const loaderElem = document.getElementById(loaderId);
-    if(loaderElem) loaderElem.style.display = 'block';
+    if(loaderElem) {
+        loaderElem.style.display = loaderId === 'global-loader' ? 'flex' : 'block';
+    }
+    
     try {
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
@@ -254,7 +319,10 @@
     const p = document.getElementById('pass').value;
     if(!u || !p) return alert("Credentials missing.");
 
-    const res = await api({ action: mode, username: u, password: p });
+    // Trigger the creative loop text
+    document.getElementById('loader-text').innerText = "LOGGING YOU IN...";
+    
+    const res = await api({ action: mode, username: u, password: p }, 'global-loader');
     if(res.success && mode === 'login') {
       currentVet = res.user;
       document.getElementById('auth').style.display = 'none';
@@ -271,13 +339,15 @@
     if (fileInput.files.length > 3) return alert("Maximum of 3 images allowed.");
 
     let base64Images = [];
+    document.getElementById('loader-text').innerText = "COMMITTING TO RECORDS...";
+
     if (fileInput.files.length > 0) {
       const filesArray = Array.from(fileInput.files);
-      document.getElementById('loader').innerText = "ENCODING_IMAGE_DATA...";
-      document.getElementById('loader').style.display = 'block';
+      document.getElementById('loader-text').innerText = "ENCODING IMAGE DATA...";
+      document.getElementById('global-loader').style.display = 'flex';
       try { base64Images = await Promise.all(filesArray.map(file => toBase64(file))); } 
-      catch (err) { document.getElementById('loader').style.display = 'none'; return alert("Failed to process images."); }
-      document.getElementById('loader').innerText = "ESTABLISHING_LINK...";
+      catch (err) { document.getElementById('global-loader').style.display = 'none'; return alert("Failed to process images."); }
+      document.getElementById('loader-text').innerText = "COMMITTING TO RECORDS...";
     }
 
     // Pack the 14+ points intelligently into the existing 4 backend text variables using Markdown style
@@ -304,7 +374,7 @@
       images: base64Images
     };
 
-    const res = await api(data);
+    const res = await api(data, 'global-loader');
     
     if(res.success) {
       showSyncSuccess();
