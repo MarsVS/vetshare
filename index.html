@@ -12,6 +12,7 @@
       --panel: #0d1117;
       --border: #30363d;
       --success: #238636;
+      --highlight: rgba(39, 195, 234, 0.05);
     }
 
     * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
@@ -31,7 +32,7 @@
     .brand h1 { margin: 0; font-size: 2.2rem; letter-spacing: 2px; color: #fff; }
     .brand span { color: var(--cyan); font-size: 0.8rem; letter-spacing: 5px; }
 
-    input, textarea {
+    input, textarea, select {
       width: 100%;
       background: #010409;
       border: 1px solid var(--border);
@@ -42,8 +43,9 @@
       font-size: 0.95rem;
     }
 
-    input:focus, textarea:focus { outline: 1px solid var(--cyan); border-color: var(--cyan); }
-    textarea { height: 100px; }
+    input:focus, textarea:focus, select:focus { outline: 1px solid var(--cyan); border-color: var(--cyan); }
+    textarea { height: 80px; resize: vertical; }
+    select { cursor: pointer; }
     
     input[type="file"] {
       padding: 10px;
@@ -66,50 +68,33 @@
     .status-bar { font-size: 0.8rem; color: var(--cyan); margin-bottom: 20px; display: flex; align-items: center; }
     .dot { height: 8px; width: 8px; background: var(--success); border-radius: 50%; margin-right: 10px; box-shadow: 0 0 10px var(--success); }
 
+    .section-title { font-size: 0.9rem; color: var(--cyan); border-bottom: 1px dashed var(--border); padding-bottom: 5px; margin-top: 1.5rem; margin-bottom: 1rem; text-transform: uppercase; }
+    .highlight-section { background: rgba(155, 39, 176, 0.05); border-left: 2px solid var(--accent); padding: 15px; border-radius: 6px; margin-bottom: 1rem;}
+
     .card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-top: 15px; }
     .card-header { display: flex; justify-content: space-between; color: var(--cyan); font-weight: bold; flex-wrap: wrap; gap: 10px; }
-    .card-meta { font-size: 0.8rem; opacity: 0.7; margin: 5px 0 15px 0; }
-    .card-text { font-size: 0.9rem; margin-bottom: 10px; white-space: pre-wrap; word-break: break-word; line-height: 1.5; }
-    .card-label { color: var(--accent); font-weight: bold; font-size: 0.85rem; display: block; margin-bottom: 2px; }
+    .card-meta { font-size: 0.85rem; opacity: 0.9; margin: 10px 0; background: #010409; padding: 8px; border-radius: 4px; border: 1px solid var(--border); }
+    .card-text { font-size: 0.9rem; margin-bottom: 10px; white-space: pre-wrap; word-break: break-word; line-height: 1.6; }
+    .card-divider { border-top: 1px dashed var(--border); margin: 15px 0; }
 
     .loader { display: none; text-align: center; color: var(--cyan); font-family: monospace; padding: 10px; }
     
-    /* Sync Success Overlay */
     #sync-overlay {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: var(--panel);
-      border: 2px solid var(--cyan);
-      padding: 2rem;
-      z-index: 100;
-      text-align: center;
-      border-radius: 8px;
-      box-shadow: 0 0 50px rgba(0,0,0,1);
+      display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); border: 2px solid var(--cyan); padding: 2rem; z-index: 100; text-align: center; border-radius: 8px; box-shadow: 0 0 50px rgba(0,0,0,1);
     }
 
-    .query-spinner {
-      display: none;
-      color: var(--accent);
-      font-family: monospace;
-      font-size: 0.9rem;
-      margin-top: 10px;
-      animation: pulse 1.5s infinite ease-in-out;
-    }
+    .query-spinner { display: none; color: var(--accent); font-family: monospace; font-size: 0.9rem; margin-top: 10px; animation: pulse 1.5s infinite ease-in-out; }
     @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
     
-    .img-preview { width: 80px; height: 80px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); }
+    .img-preview { width: 100px; height: 100px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; transition: 0.2s; }
+    .img-preview:hover { transform: scale(1.05); border-color: var(--cyan); }
   </style>
 </head>
 <body>
 
 <div id="sync-overlay">
     <div id="sync-animation" style="color: var(--cyan); font-family: monospace; font-size: 1.2rem; margin-bottom: 10px;">UPDATING ARCHIVE...</div>
-    <div id="sync-msg" style="display:none; color: var(--success); font-weight: bold;">
-        ✓ CLINICAL RECORD SYNCED TO VETSHARE
-    </div>
+    <div id="sync-msg" style="display:none; color: var(--success); font-weight: bold;">✓ CLINICAL RECORD SYNCED TO VETSHARE</div>
 </div>
 
 <div class="terminal">
@@ -136,21 +121,64 @@
 
     <div style="border-left: 2px solid var(--cyan); padding-left: 20px;">
       <h3 style="margin-top:0">NEW CLINICAL ENTRY</h3>
+      
+      <h4 class="section-title">1. Signalment & Core</h4>
       <div class="grid">
-        <input type="text" id="uid" placeholder="Identifier">
+        <select id="entryCategory" style="border-color: var(--cyan);">
+            <option value="Uncategorized">Select Disease Category...</option>
+            <optgroup label="1. Dermatology"><option value="Dermatitis">Dermatitis</option><option value="Mange">Mange</option><option value="Fungal infections">Fungal infections</option><option value="Allergies">Allergies</option><option value="Wounds">Wounds</option></optgroup>
+            <optgroup label="2. Gastrointestinal (GI)"><option value="Vomiting">Vomiting</option><option value="Diarrhea">Diarrhea</option><option value="Foreign bodies">Foreign bodies</option><option value="Parvovirus">Parvovirus</option><option value="Gastritis">Gastritis</option></optgroup>
+            <optgroup label="3. Respiratory"><option value="Pneumonia">Pneumonia</option><option value="Kennel cough">Kennel cough</option><option value="Feline upper respiratory disease">Feline upper respiratory disease</option></optgroup>
+            <optgroup label="4. Cardiovascular"><option value="Heart disease">Heart disease</option><option value="Murmurs">Murmurs</option><option value="Congestive heart failure">Congestive heart failure</option></optgroup>
+            <optgroup label="5. Urogenital"><option value="UTIs">UTIs</option><option value="Kidney disease">Kidney disease</option><option value="Urinary obstruction">Urinary obstruction</option></optgroup>
+            <optgroup label="6. Reproductive"><option value="Pyometra">Pyometra</option><option value="Dystocia">Dystocia</option><option value="Infertility">Infertility</option></optgroup>
+            <optgroup label="7. Orthopedics / Musculoskeletal"><option value="Fractures">Fractures</option><option value="Lameness">Lameness</option><option value="Hip dysplasia">Hip dysplasia</option><option value="Ligament injuries">Ligament injuries</option></optgroup>
+            <optgroup label="8. Neurology"><option value="Seizures">Seizures</option><option value="Paralysis">Paralysis</option><option value="Nerve injuries">Nerve injuries</option></optgroup>
+            <optgroup label="9. Hematology / Oncology"><option value="Anemia">Anemia</option><option value="Tumors">Tumors</option><option value="Leukemia">Leukemia</option></optgroup>
+            <optgroup label="10. Endocrinology"><option value="Diabetes">Diabetes</option><option value="Hyperthyroidism">Hyperthyroidism</option><option value="Cushing’s">Cushing’s</option></optgroup>
+            <optgroup label="11. Infectious Diseases"><option value="Parvo">Parvo</option><option value="Distemper">Distemper</option><option value="Rabies">Rabies</option><option value="Tick-borne diseases">Tick-borne diseases</option></optgroup>
+            <optgroup label="12. Toxicology"><option value="Poisoning">Poisoning</option><option value="Drug reactions">Drug reactions</option><option value="Environmental toxins">Environmental toxins</option></optgroup>
+            <optgroup label="13. Emergency & Critical Care"><option value="Shock">Shock</option><option value="Trauma">Trauma</option><option value="Bleeding">Bleeding</option><option value="Collapse">Collapse</option></optgroup>
+            <optgroup label="14. Preventive Medicine"><option value="Vaccination protocols">Vaccination protocols</option><option value="Deworming">Deworming</option><option value="Parasite control">Parasite control</option></optgroup>
+            <optgroup label="15. Exotic Animal Medicine"><option value="Rabbits">Rabbits</option><option value="Reptiles">Reptiles</option><option value="Birds">Birds</option></optgroup>
+        </select>
+        <input type="text" id="uid" placeholder="UID / File Number">
+      </div>
+      <div class="grid">
         <input type="text" id="name" placeholder="Patient Name">
         <input type="text" id="breed" placeholder="Species / Breed">
-      </div>
-      <div class="grid">
-        <input type="text" id="weight" placeholder="Weight (kg)">
         <input type="text" id="ageSex" placeholder="Age / Sex">
+        <input type="text" id="weight" placeholder="Weight (kg)">
       </div>
-      <textarea id="history" placeholder="History & Observations"></textarea>
-      <textarea id="physical" placeholder="Physical Exam Notes"></textarea>
-      <textarea id="analysis" placeholder="Clinical Analysis"></textarea>
-      <textarea id="action" placeholder="Treatment Action Plan"></textarea>
+
+      <h4 class="section-title">2 & 3. Presenting Complaint & History</h4>
+      <input type="text" id="complaint" placeholder='e.g., "Dog presented with vomiting for 2 days"'>
+      <textarea id="historyText" placeholder="Duration, Previous treatments, Environment..."></textarea>
+
+      <h4 class="section-title">4. Clinical Findings</h4>
+      <textarea id="findings" placeholder="Physical exam notes, Key observations..."></textarea>
+
+      <h4 class="section-title">5, 6 & 7. Diagnostics & Differential</h4>
+      <textarea id="diffDx" placeholder="👉 Differential Diagnoses (GOLD for learning: List 3–5 possibilities)"></textarea>
+      <textarea id="diagnostics" placeholder="Diagnostics (Tests done, Results)"></textarea>
+      <input type="text" id="finalDx" placeholder="Final Diagnosis">
+
+      <h4 class="section-title">8 & 9. Treatment & Outcome</h4>
+      <textarea id="plan" placeholder="Treatment Plan (Drugs, Supportive care, Procedures)"></textarea>
+      <input type="text" id="outcome" placeholder="Outcome">
+
+      <h4 class="section-title">10 & 11. Reasoning & Takeaways</h4>
+      <textarea id="reasoning" placeholder="🔥 Clinical Reasoning (Your secret sauce: Explain why you made each decision)"></textarea>
+      <textarea id="takeaways" placeholder="Key Takeaways (2–4 bullet points)"></textarea>
+
+      <div class="highlight-section">
+        <h4 style="margin-top:0; color: var(--accent);">🚀 WHAT MAKES YOUR VERSION DIFFERENT</h4>
+        <textarea id="mistakes" placeholder="🔹 Common Mistakes (What young vets often get wrong)"></textarea>
+        <textarea id="differently" placeholder="🔹 What I’d Do Differently (Shows growth + realism)"></textarea>
+        <textarea id="protocol" placeholder="🔹 Quick Protocol (Fast reference version)"></textarea>
+      </div>
       
-      <div style="margin-bottom: 1rem;">
+      <div style="margin-bottom: 1.5rem;">
         <label style="font-size: 0.8rem; color: var(--cyan); display: block; margin-bottom: 5px;">ATTACH SCANS/IMAGES (MAX 3):</label>
         <input type="file" id="images" accept="image/*" multiple>
       </div>
@@ -160,8 +188,28 @@
 
     <div style="margin-top: 4rem; border-left: 2px solid var(--accent); padding-left: 20px;">
       <h3 style="color: var(--accent)">SEARCH ARCHIVE HERE</h3>
+      <div class="grid" style="margin-bottom: 10px;">
+        <select id="searchCategory" style="border-color: var(--accent); margin-bottom: 0;">
+            <option value="">ALL CATEGORIES (Search Everything)</option>
+            <optgroup label="1. Dermatology"><option value="Dermatitis">Dermatitis</option><option value="Mange">Mange</option><option value="Fungal infections">Fungal infections</option><option value="Allergies">Allergies</option><option value="Wounds">Wounds</option></optgroup>
+            <optgroup label="2. Gastrointestinal (GI)"><option value="Vomiting">Vomiting</option><option value="Diarrhea">Diarrhea</option><option value="Foreign bodies">Foreign bodies</option><option value="Parvovirus">Parvovirus</option><option value="Gastritis">Gastritis</option></optgroup>
+            <optgroup label="3. Respiratory"><option value="Pneumonia">Pneumonia</option><option value="Kennel cough">Kennel cough</option><option value="Feline upper respiratory disease">Feline upper respiratory disease</option></optgroup>
+            <optgroup label="4. Cardiovascular"><option value="Heart disease">Heart disease</option><option value="Murmurs">Murmurs</option><option value="Congestive heart failure">Congestive heart failure</option></optgroup>
+            <optgroup label="5. Urogenital"><option value="UTIs">UTIs</option><option value="Kidney disease">Kidney disease</option><option value="Urinary obstruction">Urinary obstruction</option></optgroup>
+            <optgroup label="6. Reproductive"><option value="Pyometra">Pyometra</option><option value="Dystocia">Dystocia</option><option value="Infertility">Infertility</option></optgroup>
+            <optgroup label="7. Orthopedics / Musculoskeletal"><option value="Fractures">Fractures</option><option value="Lameness">Lameness</option><option value="Hip dysplasia">Hip dysplasia</option><option value="Ligament injuries">Ligament injuries</option></optgroup>
+            <optgroup label="8. Neurology"><option value="Seizures">Seizures</option><option value="Paralysis">Paralysis</option><option value="Nerve injuries">Nerve injuries</option></optgroup>
+            <optgroup label="9. Hematology / Oncology"><option value="Anemia">Anemia</option><option value="Tumors">Tumors</option><option value="Leukemia">Leukemia</option></optgroup>
+            <optgroup label="10. Endocrinology"><option value="Diabetes">Diabetes</option><option value="Hyperthyroidism">Hyperthyroidism</option><option value="Cushing’s">Cushing’s</option></optgroup>
+            <optgroup label="11. Infectious Diseases"><option value="Parvo">Parvo</option><option value="Distemper">Distemper</option><option value="Rabies">Rabies</option><option value="Tick-borne diseases">Tick-borne diseases</option></optgroup>
+            <optgroup label="12. Toxicology"><option value="Poisoning">Poisoning</option><option value="Drug reactions">Drug reactions</option><option value="Environmental toxins">Environmental toxins</option></optgroup>
+            <optgroup label="13. Emergency & Critical Care"><option value="Shock">Shock</option><option value="Trauma">Trauma</option><option value="Bleeding">Bleeding</option><option value="Collapse">Collapse</option></optgroup>
+            <optgroup label="14. Preventive Medicine"><option value="Vaccination protocols">Vaccination protocols</option><option value="Deworming">Deworming</option><option value="Parasite control">Parasite control</option></optgroup>
+            <optgroup label="15. Exotic Animal Medicine"><option value="Rabbits">Rabbits</option><option value="Reptiles">Reptiles</option><option value="Birds">Birds</option></optgroup>
+        </select>
+      </div>
       <div style="display: flex; gap: 10px;">
-        <input type="text" id="search" placeholder="Search all records (name, breed, symptoms, etc.)...">
+        <input type="text" id="search" placeholder="Search keywords (symptoms, drugs, etc.)...">
         <button class="btn btn-outline" style="width:120px" onclick="searchArchive()">Query</button>
       </div>
       
@@ -179,7 +227,6 @@
   async function api(payload, loaderId = 'loader') {
     const loaderElem = document.getElementById(loaderId);
     if(loaderElem) loaderElem.style.display = 'block';
-    
     try {
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
@@ -213,7 +260,6 @@
       document.getElementById('auth').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
       document.getElementById('active-user').innerText = currentVet.toUpperCase();
-      // Auto-load all records on login
       searchArchive();
     } else {
       alert(res.msg || "Authentication Failure");
@@ -229,14 +275,19 @@
       const filesArray = Array.from(fileInput.files);
       document.getElementById('loader').innerText = "ENCODING_IMAGE_DATA...";
       document.getElementById('loader').style.display = 'block';
-      try {
-        base64Images = await Promise.all(filesArray.map(file => toBase64(file)));
-      } catch (err) {
-        document.getElementById('loader').style.display = 'none';
-        return alert("Failed to process images.");
-      }
+      try { base64Images = await Promise.all(filesArray.map(file => toBase64(file))); } 
+      catch (err) { document.getElementById('loader').style.display = 'none'; return alert("Failed to process images."); }
       document.getElementById('loader').innerText = "ESTABLISHING_LINK...";
     }
+
+    // Pack the 14+ points intelligently into the existing 4 backend text variables using Markdown style
+    const getVal = id => document.getElementById(id).value.trim() || "N/A";
+    
+    const cat = document.getElementById('entryCategory').value;
+    const pHistory = `🏷️ CATEGORY: ${cat}\n\n⚠️ PRESENTING COMPLAINT:\n${getVal('complaint')}\n\n📖 HISTORY:\n${getVal('historyText')}`;
+    const pPhysical = `🩺 CLINICAL FINDINGS:\n${getVal('findings')}\n\n🔬 DIAGNOSTICS:\n${getVal('diagnostics')}`;
+    const pAnalysis = `🤔 DIFFERENTIAL DIAGNOSES:\n${getVal('diffDx')}\n\n✅ FINAL DIAGNOSIS:\n${getVal('finalDx')}\n\n🔥 CLINICAL REASONING:\n${getVal('reasoning')}\n\n📌 KEY TAKEAWAYS:\n${getVal('takeaways')}`;
+    const pAction = `💊 TREATMENT PLAN:\n${getVal('plan')}\n\n📈 OUTCOME:\n${getVal('outcome')}\n\n❌ COMMON MISTAKES:\n${getVal('mistakes')}\n\n🔄 WHAT I'D DO DIFFERENTLY:\n${getVal('differently')}\n\n⚡ QUICK PROTOCOL:\n${getVal('protocol')}`;
 
     const data = {
       action: 'feed',
@@ -246,10 +297,10 @@
       breed: document.getElementById('breed').value,
       weight: document.getElementById('weight').value,
       ageSex: document.getElementById('ageSex').value,
-      history: document.getElementById('history').value,
-      physical: document.getElementById('physical').value,
-      analysis: document.getElementById('analysis').value,
-      actionData: document.getElementById('action').value,
+      history: pHistory,
+      physical: pPhysical,
+      analysis: pAnalysis,
+      actionData: pAction,
       images: base64Images
     };
 
@@ -257,70 +308,81 @@
     
     if(res.success) {
       showSyncSuccess();
-      document.querySelectorAll('#dashboard input[type="text"], #dashboard textarea').forEach(i => {
-        if(i.id !== 'search') i.value = '';
-      });
+      document.querySelectorAll('#dashboard input[type="text"], #dashboard textarea').forEach(i => { if(i.id !== 'search') i.value = ''; });
+      document.getElementById('entryCategory').value = 'Uncategorized';
       fileInput.value = '';
-      searchArchive(); // Refresh the list automatically
-    } else {
-        alert(res.msg);
-    }
+      searchArchive(); 
+    } else { alert(res.msg); }
   }
 
   function showSyncSuccess() {
     const overlay = document.getElementById('sync-overlay');
     const anim = document.getElementById('sync-animation');
     const msg = document.getElementById('sync-msg');
-    
-    overlay.style.display = 'block';
-    anim.style.display = 'block';
-    msg.style.display = 'none';
+    overlay.style.display = 'block'; anim.style.display = 'block'; msg.style.display = 'none';
 
-    // Mock terminal animation
     let dots = 0;
-    const interval = setInterval(() => {
-        anim.innerText = "SYNCHRONIZING" + ".".repeat(dots % 4);
-        dots++;
-    }, 200);
+    const interval = setInterval(() => { anim.innerText = "SYNCHRONIZING" + ".".repeat(dots % 4); dots++; }, 200);
 
     setTimeout(() => {
-        clearInterval(interval);
-        anim.style.display = 'none';
-        msg.style.display = 'block';
+        clearInterval(interval); anim.style.display = 'none'; msg.style.display = 'block';
         setTimeout(() => { overlay.style.display = 'none'; }, 2500);
     }, 2000);
   }
 
   async function searchArchive() {
-    const q = document.getElementById('search').value;
+    const qText = document.getElementById('search').value;
+    const qCat = document.getElementById('searchCategory').value;
+    
+    // We send ONLY the text query to the backend to keep its `includes` logic happy
+    const res = await api({ action: 'search', query: qText }, 'query-loader');
     const box = document.getElementById('results');
-    
-    // Using query-loader for background sync
-    const res = await api({ action: 'search', query: q }, 'query-loader');
-    
     box.innerHTML = '';
+    
     if(res.success && res.data.length > 0) {
-      res.data.forEach(item => {
+      // Local filter for Categories (so we don't break backend exact-string matching)
+      let finalData = res.data;
+      if (qCat) {
+          finalData = finalData.filter(item => {
+              const fullString = JSON.stringify(item).toLowerCase();
+              return fullString.includes(qCat.toLowerCase());
+          });
+      }
+
+      if (finalData.length === 0) {
+          box.innerHTML = '<p style="text-align:center; opacity:0.5; font-family: monospace;">[!] NO_MATCHES_IN_THIS_CATEGORY</p>';
+          return;
+      }
+
+      finalData.forEach(item => {
         let imagesHtml = '';
         if (item.images && item.images.length > 0) {
           imagesHtml = `<div style="display: flex; gap: 10px; margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 10px; flex-wrap: wrap;">`;
-          item.images.forEach(imgData => {
-            imagesHtml += `<img src="${imgData}" class="img-preview" alt="Scan">`;
-          });
+          item.images.forEach(imgData => { imagesHtml += `<img src="${imgData}" class="img-preview" alt="Scan">`; });
           imagesHtml += `</div>`;
         }
 
+        // Display rendering natively uses white-space: pre-wrap, formatting our packed text beautifully
         box.innerHTML += `
           <div class="card">
             <div class="card-header">
-              <span>${item.name || 'UNKNOWN'}</span>
-              <span>${item.uid || 'NO-UID'}</span>
+              <span style="font-size: 1.1rem;">${item.name || 'UNKNOWN'}</span>
+              <span>UID: ${item.uid || 'N/A'}</span>
             </div>
-            <p class="card-meta">${item.breed || 'N/A'} | ${item.ageSex || 'N/A'} | ${item.weight || 'N/A'}</p>
-            <div class="card-text"><span class="card-label">HISTORY:</span>${item.history || ''}</div>
-            <div class="card-text"><span class="card-label">PHYSICAL:</span>${item.physical || ''}</div>
-            <div class="card-text"><span class="card-label">ANALYSIS:</span>${item.analysis || ''}</div>
-            <div class="card-text"><span class="card-label">PLAN:</span>${item.action || item.actionData || ''}</div>
+            <div class="card-meta">
+              <strong>Sp/Breed:</strong> ${item.breed || 'N/A'} | <strong>Age/Sex:</strong> ${item.ageSex || 'N/A'} | <strong>Wt:</strong> ${item.weight || 'N/A'}
+            </div>
+            
+            <div class="card-text">${item.history || ''}</div>
+            ${item.physical ? `<div class="card-divider"></div><div class="card-text">${item.physical}</div>` : ''}
+            ${item.analysis ? `<div class="card-divider"></div><div class="card-text">${item.analysis}</div>` : ''}
+            
+            ${(item.action || item.actionData) ? `
+            <div class="card-text highlight-section" style="margin-top: 15px;">
+              <span style="color: var(--accent); font-weight:bold; display:block; margin-bottom:10px;">ACTION PLAN & INSIGHTS</span>
+              ${item.action || item.actionData}
+            </div>` : ''}
+
             ${imagesHtml}
           </div>`;
       });
